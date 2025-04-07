@@ -36,13 +36,20 @@ class DataBaseHelper:
 
     async def session_dependency(self) -> AsyncSession:
         """
+        Реализация через sessipn_factory
         Это асинхронный генератор, который FastAPI может использовать как зависимость (Depends)
         Даёт сессию (yield session) во время выполнения запроса.
-        Потом автоматически удаляет сессию (await session.remove()), когда запрос завершён (или если ошибка).
+        Потом автоматически удаляет сессию (await session.close()), когда запрос завершён (или если ошибка).
         """
-        async with self.get_scoped_session() as session:
+        async with self.session_factory() as session:
             yield session
-            await session.remove()
+            await session.close()
+
+    async def scope_session_dependency(self) -> AsyncSession:
+        """Реализация через async_scoped_session"""
+        session = self.get_scoped_session()
+        yield session
+        await session.remove()
 
 
 db_helper = DataBaseHelper(

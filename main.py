@@ -2,7 +2,9 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
+from core.config import settings
 from core.models import Base, db_helper
+from api_v1 import router as api_v1_router
 from items.items_api import router as items_router
 from users.user_api import router as users_router
 
@@ -19,6 +21,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(users_router)
 app.include_router(items_router)
+app.include_router(api_v1_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/")
@@ -32,4 +35,4 @@ async def say_hello(name: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", reload=True)
