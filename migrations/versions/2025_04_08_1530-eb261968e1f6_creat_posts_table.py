@@ -1,8 +1,8 @@
 """creat posts table
 
-Revision ID: 230c3c53aea9
+Revision ID: eb261968e1f6
 Revises: bc00afafb7df
-Create Date: 2025-04-08 14:00:24.574615
+Create Date: 2025-04-08 15:30:31.674187
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "230c3c53aea9"
+revision: str = "eb261968e1f6"
 down_revision: Union[str, None] = "bc00afafb7df"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,8 +31,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.id"],
-            onupdate="CASCADE",
-            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
     )
