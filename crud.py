@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from core.models import db_helper, User, Product, Post, Profile
+from core.models import db_helper, User, Product, Post, Profile, Order
 
 
 async def create_user(session: AsyncSession, username: str) -> User:
@@ -114,32 +114,125 @@ async def get_profiles_with_users_and_users_with_posts(session: AsyncSession):
         print(profile.user.posts)
 
 
+async def main_to_relation(session: AsyncSession):
+    await create_user(session=session, username="alice")
+    user_jhon = await get_user_by_username(session=session, username="JHON")
+    await get_user_by_username(session=session, username="BOB")
+    user_sam = await get_user_by_username(session=session, username="Sam")
+    await create_user_profile(
+        session=session,
+        user_id=user_jhon.id,  # type: ignore
+        first_name="JHON",
+        last_name="SMIT",
+    )
+    await create_user_profile(
+        session=session,
+        user_id=user_sam.id,  # type: ignore
+        first_name="SAM",
+        last_name="WHITE",
+    )
+    await show_users_with_profiles(session=session)
+    await create_posts(session, user_jhon.id, "SQLA 20", "SQLA Joins")
+    await create_posts(
+        session, user_sam.id, "XSAWQ12", "213SADASZAS ASDAS", "more learn FastApi"
+    )
+    await get_users_with_posts(session=session)
+    await get_post_with_authors(session)
+    await get_users_with_posts_and_profiles(session)
+    await get_profiles_with_users_and_users_with_posts(session)
+
+
+async def create_order(
+    session: AsyncSession,
+    promocode: str | None = None,
+) -> Order:
+    order = Order(promocode=promocode)
+    session.add(order)
+    await session.commit()
+    return order
+
+
+async def create_product(
+    session: AsyncSession,
+    name: str,
+    description: str,
+    price: int,
+) -> Product:
+    product = Product(name=name, description=description, price=price)
+    session.add(product)
+    await session.commit()
+    return product
+
+
+async def create_orders_and_products(session: AsyncSession):
+    order_1 = await create_order(session=session)
+    order_2 = await create_order(session=session, promocode="promo")
+
+    mouse = await create_product(
+        session=session,
+        name="Mouse Logitach",
+        description="MT 750S",
+        price=150,
+    )
+    keyboard = await create_product(
+        session=session,
+        name="Keyboard Logitech",
+        description="K220",
+        price=250,
+    )
+    display = await create_product(
+        session=session,
+        name="Display Xiaomi",
+        description="24/12",
+        price=450,
+    )
+
+    order_1 = await session.scalar(
+        select(Order)
+        .where(Order.id == order_1.id)
+        .options(
+            selectinload(Order.products),
+        )
+    )
+    order_2 = await session.scalar(
+        select(Order)
+        .where(Order.id == order_2.id)
+        .options(
+            selectinload(Order.products),
+        ),
+    )
+
+    order_1.products.append(mouse)
+    order_1.products.append(keyboard)
+
+    order_2.products.append(keyboard)
+    order_2.products.append(display)
+
+    await session.commit()
+
+
+async def get_orders_with_products(session: AsyncSession) -> list[Order]:
+    stmt = select(Order).options(selectinload(Order.products)).order_by(Order.id)
+    orders = await session.scalars(stmt)
+    return list(orders)
+
+
+async def demo_m2m(session: AsyncSession):
+    orders = await get_orders_with_products(session=session)
+    for order in orders:
+        print(
+            order.id,
+            order.promocode,
+            order.created_at,
+            "products: ",
+        )
+        for products in order.products:
+            print("-", products.name, products.description, products.price)
+
+
 async def main():
     async with db_helper.session_factory() as session:
-        # await create_user(session=session, username="alice")
-        # user_jhon = await get_user_by_username(session=session, username="JHON")
-        # await get_user_by_username(session=session, username="BOB")
-        # user_sam = await get_user_by_username(session=session, username="Sam")
-        # await create_user_profile(
-        #     session=session,
-        #     user_id=user_jhon.id,  # type: ignore
-        #     first_name="JHON",
-        #     last_name="SMIT",
-        # )
-        # await create_user_profile(
-        #     session=session,
-        #     user_id=user_sam.id,  # type: ignore
-        #     first_name="SAM",
-        #     last_name="WHITE",
-        # )
-        # await show_users_with_profiles(session=session)
-        # await create_posts(session, user_jhon.id, "SQLA 20", "SQLA Joins")
-        # await create_posts(session, user_sam.id, "XSAWQ12", "213SADASZAS ASDAS", "more learn FastApi")
-
-        await get_users_with_posts(session=session)
-        # await get_post_with_authors(session)
-        # await get_users_with_posts_and_profiles(session)
-        # await get_profiles_with_users_and_users_with_posts(session)
+        await demo_m2m(session=session)
 
 
 if __name__ == "__main__":
